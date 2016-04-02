@@ -9,14 +9,10 @@ int DHT11_pin = 2;
 int IR_pin = 4;
 int RF_pin = 7;
 
-
 // ERRORS
 #define DHTLIB_OK		1
 #define DHTLIB_ERROR_CHECKSUM	-1
 #define DHTLIB_ERROR_TIMEOUT	-2
-
-
-
 
 // Debug mode 0, 1
 #define debug_ 0
@@ -35,19 +31,24 @@ void setup()
   digitalWrite(RF_pin, LOW);
   
   
-  
+  // Just for fun
   digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(100);               // wait for x miliseconds
+  delay(100);                // wait for x miliseconds
   digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
-  delay(100);               // wait for x miliseconds
+  delay(100);                // wait for x miliseconds
   digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(100);               // wait for x miliseconds
+  delay(100);                // wait for x miliseconds
   digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
-  delay(100);               // wait for x miliseconds
+  delay(100);                // wait for x miliseconds
   
+  // Transmision speed (from raspberry pi)
   Serial.begin(9600);
 
 }
+
+
+// ----------------------------- DHT11 ------------------------------
+// ------------------------------------------------------------------
 
 
 // Read temperature and humidity
@@ -71,7 +72,6 @@ void DHT11()
   int humidity_ = 0;
   int status_ = DHTLIB_OK;
 
-
   // EMPTY BUFFER
   for (int i=0; i< 5; i++) bits[i] = 0;
   
@@ -82,7 +82,6 @@ void DHT11()
   digitalWrite(DHT11_pin, HIGH);
   delayMicroseconds(40);
   pinMode(DHT11_pin, INPUT);
-  
   
   // ACKNOWLEDGE or TIMEOUT
   unsigned int loopCnt = 10000;
@@ -98,7 +97,6 @@ void DHT11()
     {
       status_ = DHTLIB_ERROR_TIMEOUT;
     }
-
 
   // READ OUTPUT - 40 BITS => 5 BYTES or TIMEOUT
   if (status_ >= 0)
@@ -135,8 +133,6 @@ void DHT11()
     }
   }
   
-
-  
   // WRITE TO RIGHT VARS
   // as bits[1] and bits[3] are allways zero they are omitted in formulas.
   humidity_    = bits[0]; 
@@ -146,7 +142,6 @@ void DHT11()
 
   if (bits[4] != sum) 
     status_ = DHTLIB_ERROR_CHECKSUM;
-  
   
   
   // Raspi return
@@ -189,13 +184,11 @@ void DHT11()
     Serial.print("\", \"payload\": []}\r\n");   // ", "payload":[None]}
   }
   
-  
-  
   return;
-  
 }
 
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// ----------------------------- IR_NEC -----------------------------
+// ------------------------------------------------------------------
 
 // To send a '1', it must be in 38Khz carrier, so... the inverse is 26.31 microsec
 void IR_NEC_CARRIER_ON(unsigned int timer_microseconds)
@@ -235,8 +228,6 @@ void IR_NEC()
   //unsigned long code = 0b00000000111101110010000011011111; // 00 F7 20 DF Red?
   unsigned long code = 0x00000000;
   
-
-
   // Read id + channel + on/off
   for (int j=0; j<param_num; j++)
   {
@@ -256,14 +247,10 @@ void IR_NEC()
     }
   }
   
-
-
-  
   // Initialization of protocol
   IR_NEC_CARRIER_ON(leader_on);
   digitalWrite(IR_pin, LOW); //ir_off();
   delayMicroseconds(leader_off);
-  
   
   // Send a byte
   for (int i=0;i<32;i++) // MSB first (Most significatyve byte first)
@@ -281,21 +268,18 @@ void IR_NEC()
     }
     code<<=1; // shift to the next bit
   }  
+  
   // Stop bit (Just a low bit)
     IR_NEC_CARRIER_ON(bit_on);
     
-    
     Serial.print("{\"status\":1, \"respose\":\"OK\", \"payload\":[");
-    //Serial.print(0);
     Serial.print("]}\r\n");
-    
-    
 }
 
 
 
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+// ----------------------------- RF ---------------------------------
+// ------------------------------------------------------------------
 
 // 4 bits (A, B, C or D) + 0101 + 4bits (Channel 1 or 2) + 0101 + 0001 + 4bits (ON/OFF)
 // 0: ON (on_short) + OFF(off_long)
@@ -339,8 +323,6 @@ void RF_B402B()
     }
   }
 
-  
-
   // Repeat n times
   for (int j = 0; j < repeat; j++)
   { 
@@ -352,13 +334,11 @@ void RF_B402B()
       {
         if ((code[i]>>(7-k)) & 1) // If '1' bit
         {
-          //Serial.print("1");
           digitalWrite(RF_pin, HIGH);
           delayMicroseconds(on_long);
           digitalWrite(RF_pin, LOW);    
           delayMicroseconds(off_short);
         } else { // If '0' bit
-          //Serial.print("0");
           digitalWrite(RF_pin, HIGH);
           delayMicroseconds(on_short);
           digitalWrite(RF_pin, LOW);    
@@ -380,7 +360,8 @@ void RF_B402B()
 
 
 
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// ----------------------------- MAIN LOOP -----------------------------
+// ---------------------------------------------------------------------
 
 // the loop routine runs over and over again forever:
 void loop() 
@@ -411,13 +392,9 @@ void loop()
         Serial.print("{\"status\":-1, \"respose\":\"Error command not found\", \"payload\":[]}\r\n");
         break;
     }
-  
-  
   }
   
   // Delay x ms
   delay(1000);
-
-  
 
 }
